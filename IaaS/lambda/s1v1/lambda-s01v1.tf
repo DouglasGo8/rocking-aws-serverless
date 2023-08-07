@@ -3,7 +3,7 @@ module "lambda" {
   version                 = "5.3.0"
   #
   function_name           = var.AWS_LAMBDA_NAME
-  description             = "First Build Round for Lambda"
+  description             = "First Build Lambda Round"
   handler                 = var.AWS_LAMBDA_HANDLER
   lambda_role             = aws_iam_role.appFunctionSession01v1_role.arn
   #
