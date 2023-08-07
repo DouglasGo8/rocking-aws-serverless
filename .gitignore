@@ -7,6 +7,11 @@
 *.war
 *.ear
 hs_err_pid*
+*.com
+*.dll
+*.exe
+*.o
+*.so
 
 ##########################
 ## Maven
@@ -64,6 +69,12 @@ nb-configuration.xml
 ## OS X
 ##########################
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 ##########################
 ## VS Code
@@ -186,5 +197,10 @@ typings/
 ##########################
 ## Compressed
 ##########################
-*.zip
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
 *.tar
+*.zip
