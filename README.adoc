@@ -1,0 +1,61 @@
+= Rocking AWS Serverless
+
+== This training also includes
+
+- https://quarkus.io/[Quarkus.io]
+- https://www.terraform.io/[Terraform]
+- https://camel.apache.org/[Apache Camel]
+
+== Links
+
+- https://github.com/serverless/serverless/discussions/10061[ARM64 bug fix]
+- https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest[Terraform AWS Module]
+
+== Section 01
+
+.Comparison between Models
+[%header,cols=3*]
+|===
+|Datacenter Traditional
+|CloudVM EC2 Model
+|Serverless (Lambda/Fargate)
+
+|We Must manage everything related to Datacenter, spend money on every new improvement, hard to control the main problem that is wasted resources
+|Datacenter costs are too reduced, you need to manage the virtualization to serve the traffic appropriately, in this model there is a possibility of waste resources
+|Cost-effective, and no server management is the main concern in this scenario, nothing about infra/hardware/traffic. just concern in your buzz requirements, but there are scenarios where the cost can be increased much more than virtualization,
+|===
+
+.Classify Serverless Ecosystem
+[%header,cols=3*]
+|===
+|Compute
+|Storage
+|Integration, Analytics
+
+|Lambda and Fargate
+|S3, EBS, DynamoDb, Aurora RDS
+|API Gateway, SQS, Step-functions SNS etc
+|===
+
+=== Some Lambda Details
+
+* Can choose from 128mb to 10GB, with CPU and Network allocated proportionally and 15min runtime
+* Can be invoked synchronous (e.g; API) or asynchronous (e.g; SQS, S3)
+* Inherent integration with other AWS services
+* Lambdas definitely aren't the silver bullet for all solutions
+
+.Compile Native Mode Quarkus
+[source,bash]
+----
+mvn -DskipTests clean package -Dnative -Dquarkus.native.container-build=true
+----
+
+.Lambda Session01-v1 Payload
+[source,json]
+----
+{
+  "ssn": "123xx211",
+  "name": "John Doe"
+}
+----
+
