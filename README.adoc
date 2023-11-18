@@ -54,8 +54,343 @@ mvn -DskipTests clean package -Dnative -Dquarkus.native.container-build=true
 [source,json]
 ----
 {
-  "ssn": "123xx211",
+  "ssn": "088-16-12AB",
   "name": "John Doe"
 }
 ----
 
+=== IAM Structure
+
+.Create Policy Sample
+[source,json]
+----
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:Get*",
+        "s3:List*"
+      ],
+      "Resource:": "*"
+    }
+  ]
+}
+----
+
+* EC2 needs to access an AWS Service, IAM Role attached to this instance; that means EC2 has a polity to access S3, read/write DynamoDb
+
+== API Gateway
+
+.Advanced API Gateway 4MSA Usage
+image::thumb/pic/api-gtw-msa.png[]
+
+* API Gateway can create, configure and host an API, can be used for AuthC and AuthZ, tracing caching and throttling of API requests and staged deployments, canary release
+
+.Open API Def
+[source,yaml]
+----
+openapi: "3.0.1"
+info:
+  version: 0.0.1
+  title: My awesome API
+  description: My awesome API
+paths:
+  /debug:
+    get:
+      operationId: getDebug
+      responses:
+        default:
+          description: "Default response for GET /debug"
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/debug'
+
+components:
+  x-amazon-apigateway-integrations:
+    debug:
+      type: AWS_PROXY
+      httpMethod: GET
+      uri: "${example_function_arn}"
+      payloadFormatVersion: "2.0"
+      connectionType: INTERNET
+----
+
+[source,hcl-terraform]
+----
+module 'my-awesome-api-gateway' {
+  name = "${var.api.name}-http"
+  description   = "My awesome HTTP API Gateway"
+  protocol_type = "HTTP"
+  cors_configuration = {
+    allow_headers = ["content-type", "x-amz-date", "authorization", "x-api-key", "x-amz-security-token", "x-amz-user-agent"]
+    allow_methods = ["*"]
+    allow_origins = ["*"]
+  }
+
+  default_stage_access_log_destination_arn = aws_cloudwatch_log_group.logs.arn
+  default_stage_access_log_format          = "$context.identity.sourceIp - - [$context.requestTime] \"$context.httpMethod $context.routeKey $context.protocol\" $context.status $context.responseLength $context.requestId $context.integrationErrorMessage"
+
+  default_route_settings = {
+    detailed_metrics_enabled = true
+    throttling_burst_limit   = 100
+    throttling_rate_limit    = 100
+  }
+
+  integrations = {
+
+  "ANY /" = {
+      lambda_arn             = module.lambda_function.lambda_function_arn
+      payload_format_version = "2.0"
+      timeout_milliseconds   = 12000
+    }
+
+  "GET /some-route" = {
+      lambda_arn               = module.lambda_function.lambda_function_arn
+      payload_format_version   = "2.0"
+      authorization_type       = "JWT"
+      authorizer_id            = aws_apigatewayv2_authorizer.some_authorizer.id
+      throttling_rate_limit    = 80
+      throttling_burst_limit   = 40
+      detailed_metrics_enabled = true
+    }
+
+    # ALB/VPC Link module integration, sample
+    "GET /alb-internal-route" = {
+      connection_type    = "VPC_LINK"
+      vpc_link           = "my-vpc"
+      integration_uri    = module.alb.http_tcp_listener_arns[0]
+      integration_type   = "HTTP_PROXY"
+      integration_method = "ANY"
+    }
+
+    body = templatefile("api.yaml", {
+      example_function_arn = module.lambda_function.lambda_function_arn
+    })
+
+    tags = {
+      Name = locals.aws.api-gateway
+    }
+  }
+}
+resource "aws_api_gateway_deployment" "my-awsome-api-gateway-deployment" {
+  rest_api_id = my-awesome-api-gateway.foo-http.id
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+resource "aws_apigatewayv2_stage" "my-awsome-api-gateway-stage" {
+  deployment_id = my-awesome-api-gateway.foo-http.id
+  stage_name   = "example-stage" # or data.resource
+}
+----
+
+.AWS Gateway Response Header Sample
+[source,json]
+----
+{
+  "X-Amzn-Trace-id": "Root=1-5ba446c3-2de08ea5038211;Sampled=0",
+  "Content-Type": "application/json"
+}
+----
+
+=== AWS API Gateway Components
+
+.Gateway Lifecycle
+image::thumb/pic/api-gtw-components.png[]
+
+. _Usage Plan_, provides selected API clients with access to one or more deployed apis, with a usage plan we can configure throttling and quota limits
+. _API Developer_, AWS account that owns an API Gateway deployment
+. _App Developer_, An app creator who may or many not have an AWS account and interacts with API that you, app devs are your customers, API key
+. _Resources & Methods_, (GET, POST) each method along with resources, are deployed to stages, with invoke url for each method under each resource in each stage
+. Query String with _Mapping Request Template (Apache Velocity)_
+. With alias in Lambdas, we can shift the traffic, using a combination of versionTest:${stageVariables.lambdaAlias}
+
+.AWS Cloud 9 CLI deploying lambda with version and alias
+[source,bash]
+----
+aws lambda add-permission --function-name \
+"arn:aws:lambda:sa-east-1:87221112320:function:versionTest:${stageVariables:lambdaAlias}" \
+--source-arn "arn:aws:execute-api:sa-east-1:87221112320:fq331sr24gwy/*/GET/" \
+--principal apigateway.amazonaws.com \
+--statement-id bc4636a9-09dc5-447d-a612-93c0b73e4276 \
+--action lambda:InvokeFunction
+----
+
+==== Canary Deployment
+
+* Basic idea API Gateway => API Stage => Lambda 1 (Base Version), with the stage's Request Distribution (calculated percentage of requests directed to Canary/Dev)
+
+==== Gateway Endpoint Types
+
+. _Edge Optimized_ designed to help you reduce client latency from anywhere on the Internet
+
+.Gateway Edge Optimized
+image::thumb/pic/edge-gateway-optimization.png[]
+
+. _Regional_ designed to reduce latency when calls are made from the same region as the api
+
+.Gateway Regional
+image::thumb/pic/gateway-regional.png[]
+
+.Gateway Regional and Route 53
+image::thumb/pic/gateway-regional-route53.png[]
+
+. _Private_ designed to expose APIs only inside your VPC
+
+.Gateway Private
+image::thumb/pic/gateway-private.png[]
+
+==== POST API
+
+* POST Resource mapped to Lambda
+
+==== Query Param
+
+[source,hcl-terraform]
+----
+ resource "aws_api_gateway_method" "example_api_method" {
+      rest_api_id = "${aws_api_gateway_rest_api.example_api.id}"
+      resource_id = "${aws_api_gateway_resource.example_api_resource.id}"
+      http_method = "GET"
+      authorization = "NONE"
+      request_parameters = {
+        "integration.request.querystring.account_id"=true
+      }
+}
+----
+
+==== Cross Account
+
+==== Lambda Alias and traffic Splitting
+
+==== API Caching
+
+==== Swagger and OpenAPI 3
+
+==== CORS & API Gateway
+
+* Browser security feature that restricts cross-origin HTTP Request
+
+* Only for GET, HEAD and POST
+* POST must include Origin header
+* Request payload content type can be a text/plain, multipart/form-data, or application/x-www-form-urlencoded
+* _Access-Control-Allow-Origin:_
+
+[source,hcl-terraform]
+----
+resource "aws_apigatewayv2_api" "lambda" {
+  name          = "lambda_gw_api"
+  protocol_type = "HTTP"
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["POST", "GET", "OPTIONS"]
+    allow_headers = ["content-type,X-Amz-Security-Token", "X-Amz-Date","Authorization", "X-Api-Key"]
+    max_age = 300
+  }
+}
+----
+
+==== HTTP API Vs REST API
+
+* HTTP API push us to integration scenarios with low-latency and cost-effective
+* REST API gave us more options such as _regional, edge-optimized and private_ over an HTTP API option
+
+* Quick summary of the main differences
+
+[%header,cols='1,1,1']
+|===
+|API Type |HTTP API |REST API
+|Regional | supports | supports
+|Edge-optimized | non-supports |supports
+|Private | non-supports |supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|Integration |HTTP API |REST API
+|HTTP Proxy |supports |supports
+|Lambda Proxy |supports |supports
+|HTTP |non-supports |supports
+|AWS Services |non-supports |supports
+|Private integration |supports |supports
+|Mock |non-supports |supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|Security |HTTP API |REST API
+|Client certificates |non-supports  |supports
+|AWS WAF |non-supports |supports
+|Resource Policies |non-supports |supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|Authorizers |HTTP API |REST API
+|AWS Lambda |non-supports  |supports
+|AWS IAM |non-supports |supports
+|Amazon Cognito |supports |supports
+|Native OpenID Connect /OAuth 2.0 |supports |non-supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|API Management |HTTP API |REST API
+|Usage plans |non-supports |supports
+|API Keys |non-supports |supports
+|Custom domain names |supports |supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|Monitoring |HTTP API |REST API
+|Access logs to AWS CloudWatch |supports |supports
+|Access logs to AWS Kinesis Data Firehose |non-supports |supports
+|Execution logs |non-supports |supports
+|AWS Cloudwatch metrics |supports |supports
+|AWS X-Ray |non-supports |supports
+|===
+
+[%header,cols='1,1,1']
+|===
+|Development |HTTP API |REST API
+|Cache |non-supports |supports
+|Request Transformation |non-supports |supports
+|Request / response validation |non-supports |supports
+|Test invocation |non-supports |supports
+|CORS configuration |supports |supports
+|Automatic deployments |supports |non-supports
+|Default stage |supports |non-supports
+|Default route |supports |non-supports
+|===
+
+.Custom Domain API Gateway
+image::thumb/pic/api_gateway_custom_domain_r53.png[]
+
+== Scaling Lambda
+
+* Unreserved account concurrency up to 1K instances, this is for all lambdas in the same account, e.g.:, we've 10 lambdas in our account, but one of them hold-on 900, the other lambdas will need to share only the remains quota resources
+
+* Reserved Concurrency means if I reserve 200 connections for one specific lambda will remain only 800 for all other lambdas
+
+.Concurrency sample graph
+image::thumb/pic/concurrency-8-provisioned-concurrency.png[]
+
+* On Rate of scaling in zero to one thousand, in most of the cases, can't be in one second even if your lambda has an aggressive cold start, to sum up, _provisioned concurrency_ means, _pre-initialized execution environments, no cold-start or throttling due to super-fast scaling and AWS will keep assigned capacity "Warmed"_, the question here is, make sense to keep provisioned concurrency to lambda? is probably better a EC2(Fargate or EKS), isn't it?
+
+.Provisioned Concurrency Pricing
+|===
+|Provisioned Concurrency |Price
+
+|Provisioned Concurrency
+|$0.000004167 for every GB-second
+|Duration
+
+|Requests
+|$0.20 per 1M requests
+|$0.000009722 for every GB-second
+|===
+
+.Provisioned Concurrency configuration
+image::thumb/pic/aws-lambda-provisioned-concurrency-ready.png[]

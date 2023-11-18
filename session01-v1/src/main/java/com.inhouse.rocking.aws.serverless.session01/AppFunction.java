@@ -17,6 +17,8 @@ public class AppFunction implements RequestHandler<MyRequestPojo, MyResponsePojo
             + " at" + LocalDateTime.now();
     //
     return MyResponsePojo.builder()
+            //.invokedFunctionArn(context.getInvokedFunctionArn())
+            //.memoryLimitInMb(context.getMemoryLimitInMB())
             .finalMessage(composedInfo)
             .build();
   }

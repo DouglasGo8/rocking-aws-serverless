@@ -15,7 +15,7 @@
     <maven.compiler.release>17</maven.compiler.release>
     <surefire-plugin.version>3.0.0</surefire-plugin.version>
     <compiler-plugin.version>3.11.0</compiler-plugin.version>
-    <quarkus.platform.version>3.2.0.Final</quarkus.platform.version>
+    <quarkus.platform.version>3.5.1</quarkus.platform.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -53,6 +53,6 @@
   </dependencies>
 
   <modules>
-    <module>lambda-session01-v1</module>
+    <module>session01-v1</module>
   </modules>
 </project>

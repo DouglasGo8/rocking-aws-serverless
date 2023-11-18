@@ -9,5 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 @RegisterForReflection
 public class MyResponsePojo {
+  //int memoryLimitInMb;
+  //
   String finalMessage;
+  //String invokedFunctionArn;
 }
