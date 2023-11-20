@@ -394,3 +394,65 @@ image::thumb/pic/concurrency-8-provisioned-concurrency.png[]
 
 .Provisioned Concurrency configuration
 image::thumb/pic/aws-lambda-provisioned-concurrency-ready.png[]
+
+=== Lambda Layers
+
+* Avoid duplicated buzz logic among lambdas
+
+* Lets functions easily share code: upload layer once, reference within any function
+
+* Layers can be anything as dependencies, training data, configuration files, etc
+
+* Promote logic separation of responsibilities
+
+* Get loaded with the function without additional execution latency
+
+* To sum up, layers can simplify sharing and versioning common code deployed, 250 mb size limit (not recommended), and up to five layers per function
+
+[%header,cols=2*]
+|===
+|To *DOs*
+|Not To *DON'T's*
+
+|Push shared code into discrete layers
+|Don't push unnecessary stuff into the layer, don't treat it as dumpstar, it'll increase code loading time
+
+|Version Layers and use to deploy across accounts
+|
+
+|Simplify your deployment management
+|
+|===
+
+.Lambda Layers Concept
+image::thumb/pic/lambda_layers.png[]
+
+- https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html[Working with Lambda Layers]
+
+[source,java]
+----
+class MyLambda implements RequestHandler<MyRequestPojo, MyResponsePojo> {
+   MyResponsePojo handleRequest(MyRequestPojo myRequestPojo, Context context) {
+     if (validDigits(handleRequest.digits)) {
+       createAccount(handleRequest);
+     }
+   }
+
+   boolean validateAcc(AcctNo param) {}
+   void createAccount(Context inputEvent) {}
+}
+----
+
+.Lambda Async Destinations
+image::thumb/pic/lambda-destinations1.png[]
+
+.Lambda with API Gateway Throttling usage
+image::thumb/pic/async_status_lambda_verfiy.png[]
+
+=== RDS Proxy
+
+* In a scenario with gateway lambda and spike traffic using rds proxy, we can struggle with a limited number of rds connections, orphan connections linger or db memory/cpu spent, and really lambdas can quickly exhaust the connection limit, a possible workaround is use RDS Proxy, it situates between lambda and rds instance
+
+* RDS Proxy is a fully managed, highly available database proxy, it allows applications to share a pool of database connections, using secrets management for db credentials
+
+
