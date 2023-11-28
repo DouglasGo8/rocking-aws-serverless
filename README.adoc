@@ -453,6 +453,21 @@ image::thumb/pic/async_status_lambda_verfiy.png[]
 
 * In a scenario with gateway lambda and spike traffic using rds proxy, we can struggle with a limited number of rds connections, orphan connections linger or db memory/cpu spent, and really lambdas can quickly exhaust the connection limit, a possible workaround is use RDS Proxy, it situates between lambda and rds instance
 
-* RDS Proxy is a fully managed, highly available database proxy, it allows applications to share a pool of database connections, using secrets management for db credentials
+* RDS Proxy is a fully managed, highly available database proxy; it allows applications to share a pool of database connections, using secret management for db credentials
 
+.RDS Proxy Requirements
+****
+> IAM Prerequisites
+
+. IAM Role for RDS Proxy
+. IAM Role for Lambda
+
+> VPC Rules
+
+. Security Groups for lambda to Proxy to RDS
+. Lambda requires external dependency
+****
+
+.RDS Proxy AWS
+image::thumb/pic/rds_proxy.png[]
 
