@@ -1,21 +1,22 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project
+        xmlns="http://maven.apache.org/POM/4.0.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.inhouse.rocking.aws.serverless</groupId>
   <artifactId>rocking-aws-serverless</artifactId>
-  <version>0.1.0</version>
+  <version>1.0</version>
   <packaging>pom</packaging>
 
   <name>Rocking AWS Serverless :: Quarkus.io :: Apache Camel :: Terraform</name>
 
   <properties>
     <skipITs>true</skipITs>
-    <maven.compiler.release>17</maven.compiler.release>
-    <surefire-plugin.version>3.0.0</surefire-plugin.version>
-    <compiler-plugin.version>3.11.0</compiler-plugin.version>
-    <quarkus.platform.version>3.5.1</quarkus.platform.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <surefire-plugin.version>3.2.5</surefire-plugin.version>
+    <compiler-plugin.version>3.13.0</compiler-plugin.version>
+    <quarkus.platform.version>3.8.3</quarkus.platform.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -38,7 +39,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.28</version>
+      <version>1.18.32</version>
     </dependency>
     <!-- Test -->
     <dependency>
@@ -51,8 +52,8 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
   <modules>
-    <module>session01-v1</module>
+    <module>session01-v1-simple</module>
+    <module>session01-v2-trigger</module>
   </modules>
 </project>

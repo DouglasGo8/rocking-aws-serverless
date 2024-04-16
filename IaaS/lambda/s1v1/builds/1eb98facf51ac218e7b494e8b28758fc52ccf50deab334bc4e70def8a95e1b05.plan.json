@@ -1,1 +1,0 @@
-{"filename": "builds/1eb98facf51ac218e7b494e8b28758fc52ccf50deab334bc4e70def8a95e1b05.zip", "runtime": "custom", "artifacts_dir": "builds", "build_plan": [["zip", "./../../../lambda-session01-v1/target/function.zip", null]]}

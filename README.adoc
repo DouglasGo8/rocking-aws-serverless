@@ -5,6 +5,8 @@
 - https://quarkus.io/[Quarkus.io]
 - https://www.terraform.io/[Terraform]
 - https://camel.apache.org/[Apache Camel]
+- https://aws.amazon.com/blogs/architecture/deploy-quarkus-based-applications-using-aws-lambda-with-aws-sam/[Deploy Quarkus-based applications using AWS Lambda with AWS SAM]
+- https://github.com/graalvm/mandrel/releases[Mandrel Releases GitHub]
 
 == Links
 
@@ -43,11 +45,20 @@
 * Can be invoked synchronous (e.g; API) or asynchronous (e.g; SQS, S3)
 * Inherent integration with other AWS services
 * Lambdas definitely aren't the silver bullet for all solutions
+* Lambda lets you run code without provisioning or managing servers
+* With lambda, you can run the code for virtually any type of application or backend service—all with zero administration
+* Upload your code, and _Lambda_ takes care of everything required to run and scale your code with high availability
+* You pay only for the compute time you consume
 
 .Compile Native Mode Quarkus
 [source,bash]
 ----
-mvn -DskipTests clean package -Dnative -Dquarkus.native.container-build=true
+#mvn clean -DskipTests verify package -Dnative
+# mvn -DskipTests clean package -Dnative -Dquarkus.native.container-build=true
+
+./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
+
+mvn package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 ----
 
 .Lambda Session01-v1 Payload
