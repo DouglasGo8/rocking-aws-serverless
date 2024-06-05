@@ -13,6 +13,13 @@
 - https://github.com/serverless/serverless/discussions/10061[ARM64 bug fix]
 - https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest[Terraform AWS Module]
 
+https://github.com/clouddrove/terraform-aws-api-gateway/tree/master
+
+https://github.com/c0nfleis/terraform-examples
+https://dev.to/mxglt/declare-a-simple-rest-api-gateway-terraform-5ci5
+
+https://www.bogotobogo.com/DevOps/AWS/aws-API-Gateway-Lambda-Terraform.php
+
 == Section 01
 
 .Comparison between Models
@@ -49,6 +56,14 @@
 * With lambda, you can run the code for virtually any type of application or backend service—all with zero administration
 * Upload your code, and _Lambda_ takes care of everything required to run and scale your code with high availability
 * You pay only for the compute time you consume
+
+
+=== Test the 4Rules Yes for all of them
+
+1. No Servers to provision or manager
+2. Automatically scales with usage
+3. Never pay for idle
+4. Availability and fault tolerance built in
 
 .Compile Native Mode Quarkus
 [source,bash]
@@ -92,12 +107,24 @@ mvn package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.buil
 
 * EC2 needs to access an AWS Service, IAM Role attached to this instance; that means EC2 has a polity to access S3, read/write DynamoDb
 
-== API Gateway
+
+== Section 02
+
+* API Gateway can create, configure and host an API, can be used for AuthC and AuthZ, tracing caching and throttling of API requests and staged deployments, canary release
+
+=== AWS API Gateway
+
+[source, bash]
+----
+curl -v -H "Content-Type: application/json" -X POST https://j3657j7po9.execute-api.sa-east-1.amazonaws.com/dev/hello -d '{
+    "ssn": "808-112",
+    "name": "Jon Doe"
+}'
+----
+
 
 .Advanced API Gateway 4MSA Usage
 image::thumb/pic/api-gtw-msa.png[]
-
-* API Gateway can create, configure and host an API, can be used for AuthC and AuthZ, tracing caching and throttling of API requests and staged deployments, canary release
 
 .Open API Def
 [source,yaml]
@@ -217,17 +244,6 @@ image::thumb/pic/api-gtw-components.png[]
 . Query String with _Mapping Request Template (Apache Velocity)_
 . With alias in Lambdas, we can shift the traffic, using a combination of versionTest:${stageVariables.lambdaAlias}
 
-.AWS Cloud 9 CLI deploying lambda with version and alias
-[source,bash]
-----
-aws lambda add-permission --function-name \
-"arn:aws:lambda:sa-east-1:87221112320:function:versionTest:${stageVariables:lambdaAlias}" \
---source-arn "arn:aws:execute-api:sa-east-1:87221112320:fq331sr24gwy/*/GET/" \
---principal apigateway.amazonaws.com \
---statement-id bc4636a9-09dc5-447d-a612-93c0b73e4276 \
---action lambda:InvokeFunction
-----
-
 ==== Canary Deployment
 
 * Basic idea API Gateway => API Stage => Lambda 1 (Base Version), with the stage's Request Distribution (calculated percentage of requests directed to Canary/Dev)
@@ -273,9 +289,93 @@ image::thumb/pic/gateway-private.png[]
 
 ==== Cross Account
 
-==== Lambda Alias and traffic Splitting
+To call a resource from a different account basic we need to copy the ARN,
+_arn:aws:lambda:sa-east_1:41133459552890:function:helloWorldFromSecondAccount_ with permissions
+
+.AWS Cloud 9 CLI deploying lambda with version and alias
+[source,bash]
+----
+aws lambda add-permission --function-name \
+"arn:aws:lambda:sa-east-1:87221112320:function:versionTest:${stageVariables:lambdaAlias}" \
+--source-arn "arn:aws:execute-api:sa-east-1:87221112320:fq331sr24gwy/*/GET/" \
+--principal apigateway.amazonaws.com \
+--statement-id bc4636a9-09dc5-447d-a612-93c0b73e4276 \
+--action lambda:InvokeFunction
+----
+
+Or in Terraform
+[source, hcl-terraform]
+----
+resource "aws_lambda_permission" "apigtw_lambda_permissionByInvoke" {
+  action        = "lambda:InvokeFunction"
+  function_name = "${module.lambda.lambda_function_name}"
+  principal     = "apigateway.amazonaws.com"
+  statement_id = "AllowAPIGatewayInvoke"
+  #
+  # The "/*/*" portion grants access from any method on any resource
+  # within the API Gateway REST API.
+  # In ad different account
+  source_arn    = "${aws_api_gateway_rest_api.helloWorld_apiGateway.execution_arn}/*/*"
+}
+----
+
+==== Lambda Alias and traffic Splitting (Canary Deployment)
+
+We can split the traffic based on alias/version of your lambdas as demonstrated bellow
+
+image:./thumb/pic/lambda_alias_splittraffic.png[]
+
+[source,hcl-terraform]
+----
+resource "aws_lambda_alias" "test_lambda_alias" {
+  name             = "my_alias"
+  description      = "a sample description"
+  function_name    = aws_lambda_function.lambda_function_test.arn
+  function_version = "1"
+
+  routing_config {
+    additional_version_weights = {
+      "2" = 0.5
+    }
+  }
+}
+----
+
+==== Integration Types
+
+* Lambda Function
+* HTTP
+* Mock
+* AWS Service
+* VPC Link
 
 ==== API Caching
+
+[source, hcl-terraform]
+----
+resource "aws_api_gateway_integration" "MyDemoIntegration" {
+  rest_api_id          = aws_api_gateway_rest_api.MyDemoAPI.id
+  resource_id          = aws_api_gateway_resource.MyDemoResource.id
+  http_method          = aws_api_gateway_method.MyDemoMethod.http_method
+  type                 = "MOCK"
+  cache_key_parameters = ["method.request.path.param"]
+  cache_namespace      = "foobar"
+  timeout_milliseconds = 29000
+
+  request_parameters = {
+    "integration.request.header.X-Authorization" = "'static'"
+  }
+
+  # Transforms the incoming XML request to JSON
+  request_templates = {
+    "application/xml" = <<EOF
+{
+   "body" : $input.json('$')
+}
+EOF
+  }
+}
+----
 
 ==== Swagger and OpenAPI 3
 

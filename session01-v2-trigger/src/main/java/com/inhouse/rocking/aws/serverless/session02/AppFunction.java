@@ -20,6 +20,9 @@ public class AppFunction implements RequestHandler<S3Event, String> {
     var bucketKey = s3Info.getObject().getKey();
     var bucketName = s3Info.getBucket().getName();
 
+    // We can enable Configure test S3 event
+    // S3 (bom AWS SDK).getObject(bucketName, bucketKey)
+
     log.info("BUCKET NAME: " + bucketName + " BUCKET KEY: " + bucketKey);
 
     return "Content-Type: APPLICATION/TEXT";

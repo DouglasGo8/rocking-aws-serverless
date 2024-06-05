@@ -14,7 +14,7 @@ public class AppFunction implements RequestHandler<MyRequestPojo, MyResponsePojo
   public MyResponsePojo handleRequest(MyRequestPojo myRequestPojo, Context context) {
     //
     var composedInfo = "Hello " + myRequestPojo.getName() + ": " + myRequestPojo.getSsn()
-            + " at" + LocalDateTime.now();
+            + " at " + LocalDateTime.now();
     //
     return MyResponsePojo.builder()
             //.invokedFunctionArn(context.getInvokedFunctionArn())
