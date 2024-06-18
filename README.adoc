@@ -379,20 +379,87 @@ EOF
 
 ==== Swagger and OpenAPI 3
 
+* API as Code
+* Human and machine-readable to create APIs
+* Share APIs internally and externally
+* Generates API documentation
+* Supports Yaml and Json
+* Now called "Open API Initiative"
+* You can generate Swagger files for all your APIs in API Gateway, even if you created them console
+* Recreate your APIs
+* Enables you to use any API Management tool (NOT Locked in)
+* Create standards for the APIs in your enterprise
+* Documentation helps future developers
+
 ==== CORS & API Gateway
 
 * Browser security feature that restricts cross-origin HTTP Request
 
-* Only for GET, HEAD and POST
-* POST must include Origin header
-* Request payload content type can be a text/plain, multipart/form-data, or application/x-www-form-urlencoded
-* _Access-Control-Allow-Origin:_
+* Simple
+** Only for GET, HEAD and POST
+** POST must include Origin header
+** Request payload content type can be a text/plain, multipart/form-data, or application/x-www-form-urlencoded
+** Request does not contain custom headers
+
+* Non Simple
+** All other cross origin HTTP Requests
+
+.https://suraj-batuwana.medium.com/automate-swagger-deployment-with-aws-api-gateway-6420445b74db[Fully sample Swagger and TF]
+[source, yaml]
+----
+x-amazon-apigateway-integration:
+        type: HTTP_PROXY
+        passthroughBehavior: "when_no_match"
+        httpMethod: "GET"
+        uri: ${backend_url}/api/v1/user/me
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+    options:
+      responses:
+        "200":
+          description: "200 response"
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: "string"
+            Access-Control-Allow-Methods:
+              schema:
+                type: "string"
+            Access-Control-Allow-Headers:
+              schema:
+                type: "string"
+          content: {}
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: "200"
+            responseParameters:
+              method.response.header.Access-Control-Allow-Methods: '''GET,OPTIONS'''
+              method.response.header.Access-Control-Allow-Headers: '''
+              Content-Type,x-correlation-id,authorization'''
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+        requestTemplates:
+          application/json: "{\"statusCode\": 200}"
+        passthroughBehavior: "when_no_match"
+        type: "mock"
+----
 
 [source,hcl-terraform]
 ----
-resource "aws_apigatewayv2_api" "lambda" {
+data "template_file" "user_api_swagger" {
+  template = file("openapi.yml")
+  vars = {
+    backend_url = var.backend_url
+  }
+}
+
+resource "aws_api_gateway_rest_api" "api_gateway" {
   name          = "lambda_gw_api"
   protocol_type = "HTTP"
+  body  = data.template_file.user_api_swagger.rendered
   cors_configuration {
     allow_origins = ["*"]
     allow_methods = ["POST", "GET", "OPTIONS"]

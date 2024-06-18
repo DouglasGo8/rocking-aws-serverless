@@ -32,7 +32,7 @@ resource "aws_api_gateway_integration" "helloWorld_integrationGateway" {
   rest_api_id = aws_api_gateway_rest_api.helloWorld_apiGateway.id
   resource_id = aws_api_gateway_resource.helloWorld_resourceGateway.id
   http_method = aws_api_gateway_method.helloWorld_methodGateway.http_method
-  type = "AWS"
+  type = "AWS" // AWS_PROXY
   # Lambda function can only be invoked via POST.
   integration_http_method = "POST"
   //
