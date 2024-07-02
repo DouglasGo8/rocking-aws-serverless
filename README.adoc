@@ -57,7 +57,6 @@ https://www.bogotobogo.com/DevOps/AWS/aws-API-Gateway-Lambda-Terraform.php
 * Upload your code, and _Lambda_ takes care of everything required to run and scale your code with high availability
 * You pay only for the compute time you consume
 
-
 === Test the 4Rules Yes for all of them
 
 1. No Servers to provision or manager
@@ -107,21 +106,19 @@ mvn package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.buil
 
 * EC2 needs to access an AWS Service, IAM Role attached to this instance; that means EC2 has a polity to access S3, read/write DynamoDb
 
-
 == Section 02
 
 * API Gateway can create, configure and host an API, can be used for AuthC and AuthZ, tracing caching and throttling of API requests and staged deployments, canary release
 
 === AWS API Gateway
 
-[source, bash]
+[source,bash]
 ----
 curl -v -H "Content-Type: application/json" -X POST https://j3657j7po9.execute-api.sa-east-1.amazonaws.com/dev/hello -d '{
     "ssn": "808-112",
     "name": "Jon Doe"
 }'
 ----
-
 
 .Advanced API Gateway 4MSA Usage
 image::thumb/pic/api-gtw-msa.png[]
@@ -304,7 +301,8 @@ aws lambda add-permission --function-name \
 ----
 
 Or in Terraform
-[source, hcl-terraform]
+
+[source,hcl-terraform]
 ----
 resource "aws_lambda_permission" "apigtw_lambda_permissionByInvoke" {
   action        = "lambda:InvokeFunction"
@@ -351,7 +349,7 @@ resource "aws_lambda_alias" "test_lambda_alias" {
 
 ==== API Caching
 
-[source, hcl-terraform]
+[source,hcl-terraform]
 ----
 resource "aws_api_gateway_integration" "MyDemoIntegration" {
   rest_api_id          = aws_api_gateway_rest_api.MyDemoAPI.id
@@ -405,7 +403,8 @@ EOF
 ** All other cross origin HTTP Requests
 
 .https://suraj-batuwana.medium.com/automate-swagger-deployment-with-aws-api-gateway-6420445b74db[Fully sample Swagger and TF]
-[source, yaml]
+
+[source,yaml]
 ----
 x-amazon-apigateway-integration:
         type: HTTP_PROXY
@@ -468,6 +467,16 @@ resource "aws_api_gateway_rest_api" "api_gateway" {
   }
 }
 ----
+
+=== Container Images
+
+. Use existing container tooling
+
+. Create images with what you really need, faster start up time
+
+. Perform local testing with runtime interface emulator
+
+. Up to 10Gb sized compared to 50Mb Zip deployment
 
 ==== HTTP API Vs REST API
 
@@ -633,6 +642,14 @@ image::thumb/pic/async_status_lambda_verfiy.png[]
 
 * RDS Proxy is a fully managed, highly available database proxy; it allows applications to share a pool of database connections, using secret management for db credentials
 
+. Fully managed highly available database proxy
+. Allows applications to share pool of database connections
+. Use Secrets Manager for database credentials
+. Failover without DNS change, 66% reduced failover time for Aurora, RDS
+. Allocate how many connections _Lambdas_ allow to use
+. RDS is enable to (Aurora, MySql, PostgreSQL, MariaDB, Oracle, SQL Server)
+. RDS Proxy #is not FREE#, Priced per vCPU per hour for each enabled database instance
+
 .RDS Proxy Requirements
 ****
 > IAM Prerequisites
@@ -646,6 +663,30 @@ image::thumb/pic/async_status_lambda_verfiy.png[]
 . Lambda requires external dependency
 ****
 
+.RDS Proxy Architecture
+image::thumb/pic/aws-rds-proxy.png[,1000]
+
 .RDS Proxy AWS
 image::thumb/pic/rds_proxy.png[]
 
+=== Lambda Destinations
+
+[source,hcl-terraform]
+----
+resource "aws_lambda_function_event_invoke_config" "myLambda" {
+  function_name = aws_lambda_alias.example.function_name
+  maximum_event_age_in_seconds = 60
+  maximum_retry_attempts       = 0
+  #
+  destination_config {
+    on_failure {
+      # arn:PARTITION:SERVICE:REGION:ACCOUNT:RESOURCE
+      destination = aws_sqs_queue.example.arn
+    }
+
+    on_success {
+      destination = aws_sns_topic.example.arn
+    }
+  }
+}
+----
